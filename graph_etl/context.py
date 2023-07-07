@@ -56,36 +56,6 @@ class Context:
         
         self.store.add_mapping(id_to_map, mapping)        
         
-        # def wrapper():
-            
-        #     for (source, files) in self.store._configs['edges'].items():
-        #         for (file, properties) in files.items():
-                    
-        #             if not properties['ignore_mapping'] and (id_to_map == properties['start'] or id_to_map == properties['end']):
-                    
-        #                 df = pl.read_csv(f"./output/edges/{file}", separator=";", infer_schema_length=100_000)
-                        
-        #                 for prop in ["start", "end"]:
-        #                     if id_to_map == properties[prop]:
-        #                         df = df.join(
-        #                             mapping,
-        #                             left_on=prop,
-        #                             right_on="old_value",
-        #                             how="left"
-        #                         ).with_columns(
-        #                             [pl.col("new_value").fill_null(pl.col(prop))]
-        #                         ).rename({
-        #                             prop: "mapped_from", 
-        #                             "new_value": prop
-        #                         })
-                            
-        #                 df = df.unique(subset=['start', 'end'])
-        #                 df.write_csv(f"./output/edges/{file}", separator=";")
-                        
-        #                 self.store._configs['edges'][source][file]['properties_type']['mapped_from'] = "Utf8"
-                        
-        # self.store._all_mapping_functions += [(wrapper, self.source, self.metadatas)]
-
     def save_nodes(
         self, 
         nodes: Any, 
@@ -142,7 +112,7 @@ class Context:
                 
         nodes = (
             nodes.with_columns(pl.col(pl.List(pl.Utf8)).arr.join('|'))
-                .with_columns(pl.col(pl.Utf8).str.replace_all('(\r|\n)', ''))
+                .with_columns(pl.col(pl.Utf8).str.replace_all('(\r|\n|\\\\)', ''))
                 .unique(subset=['id'])
                 .drop_nulls('id')
                 .with_row_count()
@@ -236,7 +206,7 @@ class Context:
         
         edges = (
             edges.with_columns(pl.col(pl.List(pl.Utf8)).arr.join('|'))
-                .with_columns(pl.col(pl.Utf8).str.replace_all('(\r|\n)', ''))
+                .with_columns(pl.col(pl.Utf8).str.replace_all('(\r|\n|\\\\)', ''))
                 .unique(subset=['start', 'end'])
                 .drop_nulls(['start', 'end'])
                 .with_row_count()

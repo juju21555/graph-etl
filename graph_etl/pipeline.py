@@ -48,22 +48,12 @@ def _parse(store: StoreInfo, use_mapper=True):
         
     if use_mapper:
         _map_property(store)
-    #     tqdm_mapping_func = tqdm([
-    #         (f, s, l) for (f, s, l) in store._all_mapping_functions
-    #         if not (store._filters and store._filters.skip_parse(s, l))
-    #     ])
-        
-    #     for func, source, _ in tqdm_mapping_func:
-    #         tqdm_mapping_func.set_description(f"Mapping {source} ...")
-    #         func()
-            
-    
     
 def _map_property(store: StoreInfo):
     for (source, files) in store._configs['edges'].items():
         for (file, properties) in files.items():
             
-            if not properties['ignore_mapping'] and (properties['start'] in store._ids_to_map.keys() or properties['end'] in store._ids_to_map).keys():
+            if not properties['ignore_mapping'] and (properties['start'] in store._ids_to_map.keys() or properties['end'] in store._ids_to_map.keys()):
                 df = pl.read_csv(f"./output/edges/{file}", separator=";", infer_schema_length=100_000)
                 for prop in ["start", "end"]:
                     if properties[prop] in store._ids_to_map.keys():
@@ -79,6 +69,12 @@ def _map_property(store: StoreInfo):
                             prop: "mapped_from", 
                             "new_value": prop
                         })
+                        
+                    store._configs["edges"][source][file]["ignore_mapping"] = True
+                    store._configs["edges"][source][file]["properties_type"][prop] = str(df.get_column(prop).dtype)
+                
+                df = df.unique(subset=['start', 'end'])
+                df.write_csv(f"./output/edges/{file}", separator=";")
                         
             if not (properties['start'].endswith(":id") and properties['end'].endswith(":id")):
                 df = pl.read_csv(f"./output/edges/{file}", separator=";", infer_schema_length=100_000)
@@ -111,12 +107,13 @@ def _map_property(store: StoreInfo):
                             .rename({"id": prop})
                         )
                         
-                        store._configs["edges"][source][file]["properties_type"][prop] = str(df.get_column(prop).dtype)
+                        store._configs["edges"][source][file]["ignore_mapping"] = True
                         store._configs["edges"][source][file][prop] = f"{p_label}:id"
+                        store._configs["edges"][source][file]["properties_type"][prop] = str(df.get_column(prop).dtype)
                 
-                    
-            df = df.unique(subset=['start', 'end'])
-            df.write_csv(f"./output/edges/{file}", separator=";")
+                        
+                df = df.unique(subset=['start', 'end'])
+                df.write_csv(f"./output/edges/{file}", separator=";")
                 
             
     with open(f"./output/configs/configs.json", "w") as f:
@@ -210,4 +207,3 @@ def _load(store: StoreInfo, loader_obj: Loader, clear_source : Union[List[str], 
         os.remove(store._parser_path)
     if os.path.exists(store._loader_path):
         os.remove(store._loader_path)
-         

@@ -1,4 +1,4 @@
-from .utils import Parser, parse, load, init
+from .utils import Parser, parse, load, init, clear
 from .callbacks import CallbackOWL, CallbackSHACL
 from .context import Context
 from .filters import Filter

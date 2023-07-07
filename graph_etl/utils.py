@@ -25,7 +25,6 @@ class StoreInfo:
         }
 
         self._all_parsing_functions : Dict[str, Tuple[Callable[..., None], str, str]] = {}
-        self._all_mapping_functions : List[Tuple[Callable[..., None], str, str]] = []
 
         self._config_path = os.path.abspath("./output/configs/configs.json")
         self._parser_path = os.path.abspath("./output/log_parser.txt")
@@ -63,7 +62,7 @@ class StoreInfo:
         
         self._ids_to_map = {}
     
-    def add_mapping_id(self, id_to_map: str, mapping: Any):
+    def add_mapping(self, id_to_map: str, mapping: Any):
         self._ids_to_map[id_to_map] = mapping
     
     def add_source(self, source : str):
@@ -158,6 +157,19 @@ def load(loader_obj: Loader, clear_source : Union[List[str], bool] = None):
     """
     global INFOS_SINGLETON
     _load(INFOS_SINGLETON, loader_obj=loader_obj, clear_source=clear_source)
+
+def clear():
+    """
+    Use this function at the end of the ETL to clean all intermediate files
+    """
+    import shutil
+    global INFOS_SINGLETON
+    
+    if os.path.exists("./output"):
+        shutil.rmtree("./output")
+        
+    INFOS_SINGLETON = StoreInfo()
+
 
 class Parser:
     """
