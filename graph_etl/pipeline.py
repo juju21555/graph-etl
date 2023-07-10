@@ -138,10 +138,11 @@ def _load(store: StoreInfo, loader_obj: Loader, clear_source : Union[List[str], 
     
     tqdm_load_nodes_source = tqdm(all_files_nodes, position=0)
     for file_path in tqdm_load_nodes_source:
+        
         tqdm_load_nodes_source.set_description(f"Loading nodes from file {file_path}")
         if f"{file_path}\n" in store._already_loaded: continue
+        
         infos = store._configs['nodes'][source][file_path]
-                        
         if store._filters and store._filters.skip_load_node(source, infos['metadatas'], infos['label']): continue
         
         logging.info(f"{file_path:<30} loading...")

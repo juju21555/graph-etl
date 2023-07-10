@@ -61,8 +61,9 @@ class Context:
         nodes: Any, 
         label: str,
         /, *,
-        constraints: Sequence[str] = [],
-        indexs: List[str] = [], 
+        override_id: str = "id",
+        constraints: Sequence[str] = None,
+        indexs: List[str] = None, 
         **kwargs
     ):
         """
@@ -74,6 +75,8 @@ class Context:
             A dataframe containing at least a column `id` with all the data of the nodes to save
         label : str
             A string with the label of the node to load
+        override_id : str
+            A string with the property used as id, default `id` but can be overrided using this argument
         constraints: List[str]
             A sequence of property to put a unique constraint when loaded in the database
         indexs: List[str]
@@ -118,10 +121,20 @@ class Context:
                 .with_row_count()
                 .with_columns(pl.col("row_nr")//200_000)
         )
+        
+        if not override_id:
+            override_id = 'id'
+        
+        if not constraints:
+            constraints = [override_id]
+        else:
+            constraints += [override_id]
+            
+        if not indexs: indexs = []
 
         infos = {
             'label': label,
-            'constraints': constraints + ['id'],
+            'constraints': constraints,
             'indexs': indexs,
             'properties_type': cols_type,
             'count': nodes.shape[0],
