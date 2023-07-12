@@ -3,22 +3,9 @@ from typing import List, Dict
 
 class Filter:
     def __init__(self):
-        self.sources = []
         self.nodes = []
         self.edges = []
         
-    def add_source(self, source: str):
-        if not isinstance(source, str): 
-            raise TypeError
-        self.sources.append(source)
-        return self
-    
-    def add_sources(self, sources: List[str]):
-        if not isinstance(sources, list): 
-            raise TypeError
-        self.sources += sources
-        return self
-
     def add_metadata(self, key: str, val: str):
         if not isinstance(key, dict): 
             raise TypeError
@@ -55,11 +42,11 @@ class Filter:
         self.edges += edges
         return self
 
-    def skip_parse(self, source: str, metadatas: Dict):
-        return (source not in self.sources) and all(k not in self.metadatas or v not in self.metadatas[k] for (k, v) in metadatas.items())
+    def skip_parse(self, metadatas: Dict):
+        return all(k not in self.metadatas or v not in self.metadatas[k] for (k, v) in metadatas.items())
 
-    def skip_load_node(self, source: str, metadatas: Dict, node: str):
-        return (source not in self.sources) and (node not in self.nodes) and all(k not in self.metadatas or v not in self.metadatas[k] for (k, v) in metadatas.items())
+    def skip_load_node(self, metadatas: Dict, node: str):
+        return (node not in self.nodes) and all(k not in self.metadatas or v not in self.metadatas[k] for (k, v) in metadatas.items())
     
-    def skip_load_edge(self, source: str, metadatas: Dict, edge: str):
-        return (source not in self.sources) and (edge not in self.edges) and all(k not in self.metadatas or v not in self.metadatas[k] for (k, v) in metadatas.items())
+    def skip_load_edge(self, metadatas: Dict, edge: str):
+        return (edge not in self.edges) and all(k not in self.metadatas or v not in self.metadatas[k] for (k, v) in metadatas.items())

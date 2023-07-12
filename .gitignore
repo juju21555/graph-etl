@@ -2,4 +2,5 @@ build/
 graph_etl.egg-info/
 output/
 .pytest_cache/
+.vscode/
 **/__pycache__/

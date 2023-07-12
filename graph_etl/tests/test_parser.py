@@ -1,7 +1,6 @@
 import pytest
 
 import graph_etl as etl
-import polars as pl
 import json
 
 def test_decorator():
@@ -15,10 +14,10 @@ def test_decorator():
     )
     def test_parsing(ctx: etl.Context):
         
-        df = pl.from_dicts([
+        df = [
             {"id": 1, "name": "Tom"},
             {"id": 2, "name": "Marie"},
-        ])
+        ]
         
         ctx.save_nodes(df, "Person", indexs=["name"])
         
@@ -27,23 +26,22 @@ def test_decorator():
     with open("./output/configs/configs.json", "r") as f:
         configs = json.load(f)
         
-    etl.clear()
-        
-    assert "Int" in configs["nodes"]["test"]["test_Person_0.csv"]["properties_type"]["id"]
+    assert "Int" in configs["nodes"]["Person"]["properties_type"]["id"]
     
-    assert configs["nodes"]["test"]["test_Person_0.csv"]["label"] == "Person"
+    assert "id" in configs["nodes"]["Person"]["constraints"]
+    assert len(configs["nodes"]["Person"]["constraints"]) == 1
     
-    assert "id" in configs["nodes"]["test"]["test_Person_0.csv"]["constraints"]
-    assert len(configs["nodes"]["test"]["test_Person_0.csv"]["constraints"]) == 1
+    assert "name" in configs["nodes"]["Person"]["indexs"]
+    assert len(configs["nodes"]["Person"]["indexs"]) == 1
     
-    assert "name" in configs["nodes"]["test"]["test_Person_0.csv"]["indexs"]
-    assert len(configs["nodes"]["test"]["test_Person_0.csv"]["indexs"]) == 1
+    first_file_info = list(configs["nodes"]["Person"]["files"].values())[0]
     
-    assert configs["nodes"]["test"]["test_Person_0.csv"]["count"] == 2
+    assert first_file_info["count"] == 2
     
-    assert configs["nodes"]["test"]["test_Person_0.csv"]["metadatas"]["metadata1"] == 15_000
-    assert configs["nodes"]["test"]["test_Person_0.csv"]["metadatas"]["metadata2"] == "metadata2"
+    assert first_file_info["metadata1"] == 15_000
+    assert first_file_info["metadata2"] == "metadata2"
 
+    etl.clear()
 
 def test_with_keyword():
     
@@ -55,11 +53,11 @@ def test_with_keyword():
         metadata2="metadata8"
     ) as ctx:
         
-        df = pl.from_dicts([
+        df = [
             {"id": "5", "name": "Andrew"},
             {"id": "8", "name": "Chloe"},
             {"id": "8", "name": "Donald"}, # Same id should be removed
-        ])
+        ]
         
         ctx.save_nodes(df, "Person", indexs=["name"])
 
@@ -67,22 +65,21 @@ def test_with_keyword():
     with open("./output/configs/configs.json", "r") as f:
         configs = json.load(f)
         
+    assert "id" in configs["nodes"]["Person"]["constraints"]
+    assert len(configs["nodes"]["Person"]["constraints"]) == 1
+    
+    assert "name" in configs["nodes"]["Person"]["indexs"]
+    assert len(configs["nodes"]["Person"]["indexs"]) == 1
+    
+    first_file_info = list(configs["nodes"]["Person"]["files"].values())[0]
+    
+    assert first_file_info["count"] == 2
+    
+    assert first_file_info["metadata1"] == 2_834
+    assert first_file_info["metadata2"] == "metadata8"
+    
     etl.clear()
         
-    assert configs["nodes"]["test"]["test_Person_0.csv"]["label"] == "Person"
-    
-    assert "id" in configs["nodes"]["test"]["test_Person_0.csv"]["constraints"]
-    assert len(configs["nodes"]["test"]["test_Person_0.csv"]["constraints"]) == 1
-    
-    assert "name" in configs["nodes"]["test"]["test_Person_0.csv"]["indexs"]
-    assert len(configs["nodes"]["test"]["test_Person_0.csv"]["indexs"]) == 1
-    
-    assert configs["nodes"]["test"]["test_Person_0.csv"]["count"] == 2 
-    
-    assert configs["nodes"]["test"]["test_Person_0.csv"]["metadatas"]["metadata1"] == 2_834
-    assert configs["nodes"]["test"]["test_Person_0.csv"]["metadatas"]["metadata2"] == "metadata8"
-    
-    
 def test_decorator_mapping():
     
     etl.init()
@@ -94,37 +91,37 @@ def test_decorator_mapping():
     )
     def test_parsing(ctx: etl.Context):
         
-        df = pl.from_dicts([
+        df = [
             {"start": 1, "end": "Tom"},
             {"start": 2, "end": "Marie"},
             {"start": 2, "end": "Chloe"},
-        ])
+        ]
         
-        mapping = pl.from_dicts([
+        mapping = [
             {"old_value": 2, "new_value": "F432OP"},
             {"old_value": 2, "new_value": "DUPLICATE_F432OP"}, # a duplicate will be ignored in a mapping file
             {"old_value": 1, "new_value": "P821DS"},
-        ])
+        ]
         
         ctx.save_edges(df, "DRIVED_BY", start_id="Car:id", end_id="Person:id")
         ctx.map_ids(mapping, "Car:id")
         
     etl.parse()
-
-    with open("./output/edges/test_CarDRIVED_BYPerson_0.csv", "r") as f:
-        line_tom = next(line for line in f.read().splitlines() if "Tom" in line).split(';')
-    
         
     with open("./output/configs/configs.json", "r") as f:
         configs = json.load(f)
         
-    etl.clear()
+    f_name = f"./output/edges/{list(configs['edges']['DRIVED_BY']['files'].keys())[0]}"
+    with open(f_name, 'r') as f: 
+        line_tom = next(line for line in f.read().splitlines() if "Tom" in line).split(';')
         
     assert "P821DS" in line_tom
     
-    assert "Utf8" in configs["edges"]["test"]["test_CarDRIVED_BYPerson_0.csv"]["properties_type"]["start"]
+    assert "Utf8" in configs["edges"]["DRIVED_BY"]["properties_type"]["start"]
     
-    assert configs["edges"]["test"]["test_CarDRIVED_BYPerson_0.csv"]["count"] == 3
+    assert list(configs["edges"]["DRIVED_BY"]["files"].values())[0]["count"] == 3
+        
+    etl.clear()
 
 
 def test_decorator_auto_mapping():
@@ -139,37 +136,37 @@ def test_decorator_auto_mapping():
     @etl.Parser(source="test")
     def test_parsing(ctx: etl.Context):
         
-        drived_by = pl.from_dicts([
+        drived_by = [
             {"start": 1, "end": "Tom"},
             {"start": 2, "end": "Marie"},
             {"start": 2, "end": "Chloe"},
-        ])
+        ]
         
-        person = pl.from_dicts([
+        person = [
             {"id": 101, "name": "Tom"},
             {"id": 102, "name": "Marie"},
             {"id": 103, "name": "Chloe"},
-        ])
+        ]
         
         ctx.save_nodes(person, "Person")
         ctx.save_edges(drived_by, "DRIVED_BY", start_id="Car:id", end_id="Person:name") 
         
     etl.parse()
-
-    with open("./output/edges/test_CarDRIVED_BYPerson_0.csv", "r") as f:
-        line_tom = next(line for line in f.read().splitlines() if "101" in line).split(';')
-    
         
     with open("./output/configs/configs.json", "r") as f:
         configs = json.load(f)
         
-    etl.clear()
+    f_name = f"./output/edges/{list(configs['edges']['DRIVED_BY']['files'].keys())[0]}"
+    with open(f_name, 'r') as f: 
+        line_tom = next(line for line in f.read().splitlines() if "101" in line).split(';')
         
     assert "1" in line_tom
     
-    assert "Int" in configs["edges"]["test"]["test_CarDRIVED_BYPerson_0.csv"]["properties_type"]["start"]
+    assert "Int" in configs["edges"]["DRIVED_BY"]["properties_type"]["start"]
     
-    assert configs["edges"]["test"]["test_CarDRIVED_BYPerson_0.csv"]["end"] == "Person:id"
+    assert configs["edges"]["DRIVED_BY"]["end"] == "Person:id"
     
-    assert configs["edges"]["test"]["test_CarDRIVED_BYPerson_0.csv"]["count"] == 3
+    assert list(configs["edges"]["DRIVED_BY"]["files"].values())[0]["count"] == 3
 
+    etl.clear()
+        

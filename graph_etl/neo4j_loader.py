@@ -91,22 +91,12 @@ class Neo4JLoader(Loader):
         if self.node_finding_strategy not in ("match", "create"):
             raise ValueError("`node_finding_strategy` must be either 'match' or 'create'")
     
-        # for source in store._configs['nodes']:
-        #     if clear_source is True or (clear_source and source in clear_source):
-        #         graph.run(f"""
-        #             MATCH (n)
-        #             WHERE '{source}' in n.sources
-        #             CALL {{
-        #                 WITH n
-        #                 DETACH DELETE n
-        #             }} IN TRANSACTIONS OF 1000 ROWS
-        #         """)
             
     def load_nodes(
         self,
         file_path: str,
         label: str,
-        source: str,
+        primary_key: str,
         metadatas: Dict,
         properties_type: Dict[str, str],
         constraints: List[str],
@@ -121,10 +111,10 @@ class Neo4JLoader(Loader):
         ----------
         file_path : str
             Path of the file containing all nodes data
+        primary_key : str
+            Default to `id` but can be overriden in ``save_nodes`` function
         label : str
             A string with the label of the node to load
-        source: str
-            The name of the source from where the data come from
         metadatas: Dict
             Metadatas on nodes
         properties_type: Dict[str, str]
@@ -157,14 +147,15 @@ class Neo4JLoader(Loader):
         prop_mapped = ",".join(f"{k}: {{ {Neo4JLoader.csv_mapping(property)} }}" for k, property in properties_type.items())
         loader_options = f"{{sep: ';', arraySep: '|', escapeChar:'NONE', mapping : {{ {prop_mapped} }} }}"
         
+        metadatas = ",".join(f"{k}: '{v}'" for k, v in metadatas.items())
         
         QUERY = f"""
         CALL apoc.periodic.iterate(
-            "CALL apoc.load.csv('file:/{file_path}', {loader_options}) YIELD map as row WHERE row.id IS NOT NULL RETURN row",
-            "MERGE (n:{label} {{id: row.id}}) 
-            ON MATCH SET n.sources = n.sources + '{source}'
-            ON CREATE SET n.sources = ['{source}']
-            SET n += row",
+            "CALL apoc.load.csv('file:/{file_path}', {loader_options}) YIELD map as row WHERE row.{primary_key} IS NOT NULL RETURN row",
+            "MERGE (n:{label} {{id: row.{primary_key}}}) 
+            SET n += row
+            MERGE (m:Metadata {{{metadatas}}})
+            CREATE (n)-[:HAS_METADATA]->(m)",
             {{batchSize: 50000, iterateList: true, parallel: false}}
         )"""
         
@@ -192,7 +183,6 @@ class Neo4JLoader(Loader):
         edge_type: str,
         start: str,
         end: str,
-        source: str,
         metadatas: Dict,
         properties_type: Dict[str, str]
     ) -> int:
@@ -211,8 +201,6 @@ class Neo4JLoader(Loader):
             A string of the form `Concept`:`property` to start the relationship
         end : str
             A string of the form `Concept`:`property` to end the relationship
-        source: str
-            The name of the source from where the data come from
         metadatas: Dict
             Metadatas on edges
         properties_type: Dict[str, str]
@@ -249,8 +237,8 @@ class Neo4JLoader(Loader):
         start_label, start_id = start.split(':')
         end_label, end_id = end.split(':')
 
-        bonus_properties = " ".join(f", {property}: row.{property}" for property in header)
-        edges_properties = f"{{ source: '{source}' {bonus_properties} }}"
+        edges_properties = " ".join(f", {property}: row.{property}" for property in header)
+        # edges_properties = f"{{ metadatas: '{metadatas}' {bonus_properties} }}"
 
         prop_mapped = ",".join(f"{k}: {{ {Neo4JLoader.csv_mapping(property)} }}" for k, property in properties_type.items())
         loader_options = f"{{sep: ';', arraySep: '|', escapeChar:'NONE', mapping : {{ {prop_mapped} }} }}"

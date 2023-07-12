@@ -87,7 +87,7 @@ class TigerGraphLoader(Loader):
         self,
         file_path: str,
         label: str,
-        source: str,
+        primary_key: str,
         metadatas: Dict,
         properties_type: Dict[str, str],
         constraints: List[str],
@@ -104,8 +104,6 @@ class TigerGraphLoader(Loader):
             Path of the file containing all nodes data
         label : str
             A string with the label of the node to load
-        source: str
-            The name of the source from where the data come from
         metadatas: Dict
             Metadatas on nodes
         properties_type: Dict[str, str]
@@ -143,7 +141,7 @@ class TigerGraphLoader(Loader):
         CREATE SCHEMA_CHANGE JOB add_node_{file_name} FOR GRAPH Default {{
             ADD VERTEX {label} (
                 {prop_mapped},
-                source STRING
+                metadatas MAP
             );
         }}
         RUN SCHEMA_CHANGE JOB add_node_{file_name}"""
@@ -154,7 +152,7 @@ class TigerGraphLoader(Loader):
         USE GRAPH Default
         CREATE LOADING JOB load_node_{file_name} FOR GRAPH Default {{
             DEFINE FILENAME file1="{file_path}";
-            LOAD file1 TO VERTEX {label} VALUES ({', '.join(f'$"{k}"' for k in properties_type.keys())}, "{source}") USING header="true", separator=";";
+            LOAD file1 TO VERTEX {label} VALUES ({', '.join(f'$"{k}"' for k in properties_type.keys())}, "{metadatas}") USING header="true", separator=";";
         }}
         RUN LOADING JOB load_node_{file_name}"""
         
@@ -173,7 +171,6 @@ class TigerGraphLoader(Loader):
         edge_type: str,
         start: str,
         end: str,
-        source: str,
         metadatas: Dict,
         properties_type: Dict[str, str]
     ) -> int:
@@ -192,8 +189,6 @@ class TigerGraphLoader(Loader):
             A string of the form `Concept`:`property` to start the relationship
         end : str
             A string of the form `Concept`:`property` to end the relationship
-        source: str
-            The name of the source from where the data come from
         metadatas: Dict
             Metadatas on edges
         properties_type: Dict[str, str]
@@ -249,7 +244,7 @@ class TigerGraphLoader(Loader):
                 FROM {start_label}, 
                 TO {end_label},
                 {prop_mapped},
-                source STRING
+                metadatas MAP
             );
         }}
         RUN SCHEMA_CHANGE JOB add_edge_{file_name}"""
@@ -260,7 +255,7 @@ class TigerGraphLoader(Loader):
         USE GRAPH Default
         CREATE LOADING JOB load_edge_{file_name} FOR GRAPH Default {{
             DEFINE FILENAME file1="{file_path}";
-            LOAD file1 TO EDGE {edge_type} VALUES ({', '.join(f'$"{k}"' for k in properties_type.keys())}, "{source}") USING header="true", separator=";";
+            LOAD file1 TO EDGE {edge_type} VALUES ({', '.join(f'$"{k}"' for k in properties_type.keys())}, "{metadatas}") USING header="true", separator=";";
         }}
         RUN LOADING JOB load_edge_{file_name}"""
         

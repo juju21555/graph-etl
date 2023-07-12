@@ -14,7 +14,6 @@ class Callback(ABC):
         self,
         label: str,
         properties: Dict[str, str],
-        source: str,
         metadatas: Dict,
         **kwargs
     ) :
@@ -40,8 +39,6 @@ class CallbackOWL(Callback):
             self.ontology = owl2.get_ontology("./output/file.owl").load()
         except:
             self.ontology = owl2.get_ontology("http://aidd4h.org/")
-            with self.ontology:
-                class has_source(owl2.AnnotationProperty): pass
     
     def type_mapping(
         self,
@@ -61,14 +58,12 @@ class CallbackOWL(Callback):
         self,
         label: str,
         properties: Dict[str, str],
-        source: str,
         metadatas: Dict,
         **kwargs
     ) :
         with self.ontology:
             nodeClass = types.new_class(label, (self._owl2.Thing, ))
             
-            nodeClass.has_source.append(source)
             for k, v in metadatas.items():
                 types.new_class(f"has_{k}", (self._owl2.AnnotationProperty, ))
                 nodeClass.__getattribute__(f"has_{k}").append(v)
@@ -167,7 +162,6 @@ class CallbackSHACL(Callback):
         self,
         label: str,
         properties: Dict[str, str],
-        source: str,
         metadatas: Dict,
         **kwargs
     ) :
@@ -199,11 +193,6 @@ class CallbackSHACL(Callback):
             self.g.add((self._rdflib.NEO4J[label_shape], self._rdflib.namespace.SH.property, b_node_prop))
             self.g.add((b_node_prop, self._rdflib.namespace.SH.path, self._rdflib.NEO4J[k]))
             self.g.add((b_node_prop, self._rdflib.namespace.SH.datatype, self._rdflib.namespace.XSD.string))
-        
-        b_node_prop = self._rdflib.BNode()
-        self.g.add((self._rdflib.NEO4J[label_shape], self._rdflib.namespace.SH.property, b_node_prop))
-        self.g.add((b_node_prop, self._rdflib.namespace.SH.path, self._rdflib.NEO4J["sources"]))
-        self.g.add((b_node_prop, self._rdflib.namespace.SH.datatype, self._rdflib.namespace.XSD.string))
         
         self.g.serialize("./output/file.ttl", format="turtle")
         

@@ -16,7 +16,7 @@ class Loader(ABC):
         self,
         file_path: str,
         label: str,
-        source: str,
+        primary_key: str,
         metadatas: Dict,
         properties_type: Dict[str, str],
         constraints: List[str],
@@ -31,7 +31,6 @@ class Loader(ABC):
         edge_type: str,
         start: str,
         end: str,
-        source: str,
         metadatas: Dict,
         properties_type: Dict[str, str]
     ) -> int:

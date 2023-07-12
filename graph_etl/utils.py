@@ -1,10 +1,12 @@
 from __future__ import annotations
 from typing import Callable, List, Dict, Union, Tuple, TYPE_CHECKING, Any
-
+import uuid
 import json
 import os
 import time
 import logging
+
+from dotwiz import DotWiz
 
 from .pipeline import _init, _load, _parse, _map_property
 from .context import Context
@@ -16,16 +18,6 @@ if TYPE_CHECKING:
     
 class StoreInfo:
     def __init__(self):
-        self._stats_store = {
-            "nodes_count": 0,
-            "edges_count": 0,
-            "nodes_count_source": 0,
-            "edges_count_source": 0,
-            "total_time": 0
-        }
-
-        self._all_parsing_functions : Dict[str, Tuple[Callable[..., None], str, str]] = {}
-
         self._config_path = os.path.abspath("./output/configs/configs.json")
         self._parser_path = os.path.abspath("./output/log_parser.txt")
         self._mapper_path = os.path.abspath("./output/log_mapper.txt")
@@ -48,42 +40,37 @@ class StoreInfo:
                 self._already_loaded = f.readlines()
         else:
             self._already_loaded = []
-            
-        if os.path.exists(self._config_path):
-            with open(self._config_path, "r") as f:
-                self._configs = json.load(f)
-        else:
-            self._configs = {
-                'nodes': {},
-                'edges': {}
-            }
+
+        self.init()
+        
+    def init(self):
+        self._stats_store = {
+            "nodes_count": 0,
+            "edges_count": 0,
+            "nodes_count_source": 0,
+            "edges_count_source": 0,
+            "total_time": 0
+        }
+        
         self._filters: Filter = None
         self._callbacks: List[Callback] = None
         
+        self._all_parsing_functions : Dict[str, Tuple[Callable[..., None], Dict]] = {}
         self._ids_to_map = {}
+        
+        self._configs = DotWiz({
+            'nodes': {},
+            'edges': {}
+        })
     
     def add_mapping(self, id_to_map: str, mapping: Any):
         self._ids_to_map[id_to_map] = mapping
     
-    def add_source(self, source : str):
-        if source not in self._configs['nodes']:
-            self._configs['nodes'].update({source: {}})
-        if source not in self._configs['edges']:
-            self._configs['edges'].update({source: {}})
-        
-    def update_nodes(self, source : str, file_name : str, infos: Dict):
-        self._configs['nodes'][source].update({file_name: infos})
-        self._stats_store['nodes_count_source'] += infos['count']
-        
-    def update_edges(self, source : str, file_name : str, infos: Dict):
-        self._configs['edges'][source].update({file_name: infos})
-        self._stats_store['edges_count_source'] += infos['count']
-        
-    def save_parser_infos(self, func_name : str, time : float, source : str):
+    def save_parser_infos(self, func_uuid : str, time : float):
         with open(f"./output/configs/configs.json", "w") as f:
             json.dump(self._configs, f, indent=4)
         
-        logging.info(f"{func_name:<30} took {time//60}m {time%60}s to finish")
+        logging.info(f"{func_uuid:<30} took {time//60}m {time%60}s to finish")
         logging.info(f"| -- Total nodes : {self._stats_store['nodes_count_source']:>12} -- |")
         logging.info(f"| -- Total edges : {self._stats_store['edges_count_source']:>12} -- |")
         
@@ -95,14 +82,28 @@ class StoreInfo:
         
         self._stats_store['total_time'] += time
         
-        if func_name != "anonymous function":
-            with open(self._parser_path, "a") as f:
-                f.write(f"{source}_{func_name}\n")
-
-    def save_mapper_infos(self, func_name : str, time : float, source : str):
-        logging.info(f"{func_name:<30} took {time//60}m {time%60}s to finish")
-        with open(self._mapper_path, "a") as f:
-            f.write(f"{source}\n")
+        with open(self._parser_path, "a") as f:
+            f.write(f"{func_uuid}\n")
+        
+    def update_nodes(self, label: str, file_name : str, default_infos: Dict, metadatas: Dict, count: int):
+        if label not in self._configs.nodes:
+            self._configs.nodes[label] = default_infos
+        
+        self._configs.nodes[label].files[file_name] = {
+            **metadatas,
+            'count': count
+        }
+        self._stats_store['nodes_count_source'] += count
+        
+    def update_edges(self, edge_type: str, file_name : str, default_infos: Dict, metadatas: Dict, count: int):
+        if edge_type not in self._configs.edges:
+            self._configs.edges[edge_type] = default_infos
+            
+        self._configs.edges[edge_type].files[file_name] = {
+            **metadatas,
+            'count': count
+        }
+        self._stats_store['edges_count_source'] += count
         
     def set_filters(self, filters: Filter = None):
         self._filters = filters
@@ -182,8 +183,6 @@ class Parser:
     sources_path : List[str]
         A list of path to the different files used in the function to check 
         if all files exists before parsing
-    source : str
-        The name of the source from where the data come from
     **kwargs : Dict
         The metadatas of the source
         
@@ -217,13 +216,10 @@ class Parser:
     
     def __init__(
         self, 
-        source: str, 
         sources_path: List[str] | str = None, 
         ignore: bool = False,
         **kwargs
     ):
-        INFOS_SINGLETON.add_source(source)
-        self.source = source
         if not sources_path:
             self.sources_path = []
         elif isinstance(sources_path, str):
@@ -231,15 +227,17 @@ class Parser:
         else:
             self.sources_path = sources_path
         
+        self._id = "FUNCTION_"+str(uuid.uuid4())
+        
         self.metadatas = kwargs
         self.ignore = ignore
         
-        self.context = Context(INFOS_SINGLETON, self.metadatas, self.source)
+        self.context = Context(INFOS_SINGLETON, self.metadatas)
         
         
-    def _should_skip(self, func_name):
-        if f"{self.source}_{func_name}\n" in INFOS_SINGLETON._already_parsed or self.ignore:
-            logging.warning(f"{func_name} | already parsed, skipping... ")
+    def _should_skip(self, func_uuid):
+        if f"{func_uuid}\n" in INFOS_SINGLETON._already_parsed or self.ignore:
+            logging.warning(f"{func_uuid} | already parsed, skipping... ")
             return True
         
         files_not_found = []
@@ -248,23 +246,23 @@ class Parser:
                 files_not_found.append(path)
         
         if files_not_found:
-            logging.warning(f"{func_name} | files missing : {files_not_found}, skipping... ")
+            logging.warning(f"{func_uuid} | files missing : {files_not_found}, skipping... ")
             return True
         
         return False
     
     def __enter__(self):
-        if self._should_skip("anonymous function"): 
-            return Context(None, None, None)
+        if self._should_skip(self._id): 
+            return Context(None, None)
         
         self.start = time.time()
         return self.context
     
     def __exit__(self, *args):
-        if self._should_skip("anonymous function"): 
+        if self._should_skip(self._id): 
             return None
         
-        INFOS_SINGLETON.save_parser_infos("anonymous function", time.time() - self.start, self.source)
+        INFOS_SINGLETON.save_parser_infos(self._id, time.time() - self.start)
         _map_property(INFOS_SINGLETON)
         
     def __call__(self, f):
@@ -277,11 +275,11 @@ The variable `context` must be used in the function to save nodes or edges using
 `context.map_ids(...)`""")
         
         def wrapper():
-            if self._should_skip(f.__name__): return
+            if self._should_skip(self._id): return
             
             start = time.time()
             f(self.context)
-            INFOS_SINGLETON.save_parser_infos(f.__name__, time.time() - start, self.source)
+            INFOS_SINGLETON.save_parser_infos(self._id, time.time() - start)
             
-        INFOS_SINGLETON._all_parsing_functions[f.__name__] = (wrapper, self.source, self.metadatas)
+        INFOS_SINGLETON._all_parsing_functions[self._id] = (wrapper, self.metadatas)
         return wrapper

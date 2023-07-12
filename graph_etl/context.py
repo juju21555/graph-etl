@@ -2,16 +2,16 @@ from __future__ import annotations
 from typing import List, Dict, Union, TYPE_CHECKING, Sequence, Any
 
 import polars as pl
+from uuid import uuid4
 
 if TYPE_CHECKING:
     from .utils import StoreInfo
 
 
 class Context:
-    def __init__(self, store: StoreInfo, metadatas: Dict, source: str):
+    def __init__(self, store: StoreInfo, metadatas: Dict):
         self.store: StoreInfo = store
         self.metadatas: Dict = metadatas
-        self.source: str = source
         
     def map_ids(
         self, 
@@ -61,7 +61,7 @@ class Context:
         nodes: Any, 
         label: str,
         /, *,
-        override_id: str = "id",
+        primary_key: str = "id",
         constraints: Sequence[str] = None,
         indexs: List[str] = None, 
         **kwargs
@@ -75,8 +75,8 @@ class Context:
             A dataframe containing at least a column `id` with all the data of the nodes to save
         label : str
             A string with the label of the node to load
-        override_id : str
-            A string with the property used as id, default `id` but can be overrided using this argument
+        primary_key : str
+            A string with the property used as primary key, default `id` but can be overrided using this argument
         constraints: List[str]
             A sequence of property to put a unique constraint when loaded in the database
         indexs: List[str]
@@ -111,44 +111,45 @@ class Context:
         
         if self.store._callbacks:
             for callback in self.store._callbacks:
-                callback.save_nodes(label, cols_type, self.source, self.metadatas, **kwargs)
+                callback.save_nodes(label, cols_type, self.metadatas, **kwargs)
                 
+        if not primary_key:
+            primary_key = 'id'
+            
         nodes = (
             nodes.with_columns(pl.col(pl.List(pl.Utf8)).arr.join('|'))
                 .with_columns(pl.col(pl.Utf8).str.replace_all('(\r|\n|\\\\)', ''))
-                .unique(subset=['id'])
-                .drop_nulls('id')
+                .unique(subset=[primary_key])
+                .drop_nulls(primary_key)
                 .with_row_count()
                 .with_columns(pl.col("row_nr")//200_000)
         )
         
-        if not override_id:
-            override_id = 'id'
         
         if not constraints:
-            constraints = [override_id]
+            constraints = [primary_key]
         else:
-            constraints += [override_id]
+            constraints += [primary_key]
             
         if not indexs: indexs = []
 
-        infos = {
-            'label': label,
+        default_infos = {
+            'primary_key': primary_key,
             'constraints': constraints,
             'indexs': indexs,
             'properties_type': cols_type,
-            'count': nodes.shape[0],
-            'metadatas': self.metadatas
+            'files': {}
         }
+        
+        uuid = "FILE_"+str(uuid4())
 
         for i_chunk in nodes.get_column("row_nr").unique().to_list():
-            file_name = f"{self.source}_{label}_{i_chunk}.csv"
+            file_name = f"{uuid}_{label}_{i_chunk}.csv"
             
             chunk = nodes.filter(pl.col("row_nr")==i_chunk).drop("row_nr")
             chunk.write_csv(f"./output/nodes/{file_name}", separator=';')
             
-            infos.update({'count': chunk.shape[0]})
-            self.store.update_nodes(self.source, file_name, infos)
+            self.store.update_nodes(label, file_name, default_infos, self.metadatas, chunk.shape[0])
         
     def save_edges(
         self, 
@@ -226,21 +227,20 @@ class Context:
                 .with_columns(pl.col("row_nr")//500_000)
         )
 
-        infos = {
-            'type': edge_type,
+        default_infos = {
             'start': start_id,
             'end': end_id,
             'properties_type': cols_type,
             'ignore_mapping': ignore_mapping,
-            'metadatas': self.metadatas
+            'files': {}
         }
 
+        uuid = "FILE_"+str(uuid4())
+        
         for i_chunk in edges.get_column("row_nr").unique().to_list():
-            file_name = f"{self.source}_{start_label}{edge_type}{end_label}_{i_chunk}.csv"
+            file_name = f"{uuid}_{start_label}{edge_type}{end_label}_{i_chunk}.csv"
             
             chunk = edges.filter(pl.col("row_nr")==i_chunk).drop("row_nr")
             chunk.write_csv(f"./output/edges/{file_name}", separator=';')
             
-            infos.update({'count': chunk.shape[0]})
-            self.store.update_edges(self.source, file_name, infos)
-
+            self.store.update_edges(edge_type, file_name, default_infos, self.metadatas, chunk.shape[0])
