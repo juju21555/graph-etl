@@ -1,6 +1,6 @@
 # Graph-etl
 
-Graph-etl is a Python library to help you load large data from various source in Neo4J or TigerGraph and handle meta
+Graph-etl is a Python library to help you load large data from various source in Neo4J or TigerGraph and handle metadata.
 
 ## Requirements
 
@@ -181,7 +181,7 @@ Each occurence of `Car:id` in edges dataframe will be replaced by the ``new_valu
 
 Internally, `graph-etl` use polars dataframe to ensure type-safety, but you can use any object that support the python dataframe protocol or a list of Dict.
 
-## graph-etl flow function
+## graph-etl flow
 
 First, you need to call `getl.init()` and can pass optional arguments, to later filter or add callbacks methods to the ETL:
 
