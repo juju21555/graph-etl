@@ -83,7 +83,9 @@ class Neo4JLoader(Loader):
             database=config["database"]
         )
         
-        if self.graph is None:
+        try:
+            self.graph.verify_connectivity()
+        except:
             logging.error("No Neo4j instance found, check config at : ./output/config.yaml")
             raise ConnectionError("No Neo4j instance found, check config at : ./output/config.yaml")
         
