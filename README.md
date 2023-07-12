@@ -203,6 +203,8 @@ Construct a `SHACL` schema or an `OWL2` schema of the graph by passing `Callback
 getl.parse(callbacks=[getl.CallbackOWL(), getl.CallbackSHACL()])
 ```
 
+`getl.CallbackOWL()` need the module `owlready2` and `getl.CallbackSHACL()` need the module `rdflib`
+
 After defining parsing function using the `@getl.Parser` decorator, calling the `getl.parse()` function will call each functions to parse and save datasets in `csv` files and metadata in a `json` file.
 
 Then calling `getl.load(connection)` with a connection object which is either `getl.Neo4JLoader()` or `getl.TigerGraphLoader()`, it will load everything in your graph database.
