@@ -170,3 +170,48 @@ def test_decorator_auto_mapping():
 
     etl.clear()
         
+        
+def test_decorator_filter():
+    
+    @etl.Parser(source="test")
+    def test_parsing_1(ctx: etl.Context):
+        df = [
+            {"id": 1, "name": "Tom"},
+            {"id": 2, "name": "Marie"},
+        ]
+        
+        ctx.save_nodes(df, "Person", indexs=["name"])
+        
+    @etl.Parser(source="test2")
+    def test_parsing_2(ctx: etl.Context):
+        df = [
+            {"id": 8, "name": "Tom"},
+            {"id": 4, "name": "Marie"},
+        ]
+        
+        ctx.save_nodes(df, "Person", indexs=["name"])
+    
+    filters = etl.Filter().add_metadata("source", "test2")
+    
+    etl.init(filters=filters)
+        
+    etl.parse()
+
+    with open("./output/configs/configs.json", "r") as f:
+        configs = json.load(f)
+        
+    f_name = f"./output/nodes/{list(configs['nodes']['Person']['files'].keys())[0]}"
+    with open(f_name, 'r') as f: 
+        line_tom = next(line for line in f.read().splitlines() if "Tom" in line).split(';')
+        
+    assert "8" in line_tom
+
+    assert len(configs["nodes"]["Person"]["files"]) == 1
+    
+    first_file_info = list(configs["nodes"]["Person"]["files"].values())[0]
+    
+    assert first_file_info["count"] == 2
+
+    etl.clear()
+    
+test_decorator_filter()

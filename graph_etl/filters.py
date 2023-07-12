@@ -1,13 +1,19 @@
 
-from typing import List, Dict
+from typing import Any, List, Dict
 
 class Filter:
     def __init__(self):
         self.nodes = []
         self.edges = []
+    
+    def __getitem__(self, key: str):
+        return getattr(self, key)
+    
+    def __contains__(self, key: str):
+        return key in self.__dict__.keys()
         
     def add_metadata(self, key: str, val: str):
-        if not isinstance(key, dict): 
+        if not isinstance(key, str): 
             raise TypeError
         setattr(self, key, [val])
         return self
@@ -43,10 +49,10 @@ class Filter:
         return self
 
     def skip_parse(self, metadatas: Dict):
-        return all(k not in self.metadatas or v not in self.metadatas[k] for (k, v) in metadatas.items())
+        return all(k not in self or v not in self[k] for (k, v) in metadatas.items())
 
     def skip_load_node(self, metadatas: Dict, node: str):
-        return (node not in self.nodes) and all(k not in self.metadatas or v not in self.metadatas[k] for (k, v) in metadatas.items())
+        return (node not in self.nodes) and all(k not in self or v not in self[k] for (k, v) in metadatas.items())
     
     def skip_load_edge(self, metadatas: Dict, edge: str):
-        return (edge not in self.edges) and all(k not in self.metadatas or v not in self.metadatas[k] for (k, v) in metadatas.items())
+        return (edge not in self.edges) and all(k not in self or v not in self[k] for (k, v) in metadatas.items())

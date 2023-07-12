@@ -41,9 +41,9 @@ class StoreInfo:
         else:
             self._already_loaded = []
 
-        self.init()
+        self.clear()
         
-    def init(self):
+    def clear(self):
         self._stats_store = {
             "nodes_count": 0,
             "edges_count": 0,
@@ -229,7 +229,7 @@ class Parser:
         
         self._id = "FUNCTION_"+str(uuid.uuid4())
         
-        self.metadatas = kwargs
+        self.metadatas = {**kwargs}
         self.ignore = ignore
         
         self.context = Context(INFOS_SINGLETON, self.metadatas)
@@ -280,6 +280,6 @@ The variable `context` must be used in the function to save nodes or edges using
             start = time.time()
             f(self.context)
             INFOS_SINGLETON.save_parser_infos(self._id, time.time() - start)
-            
+        
         INFOS_SINGLETON._all_parsing_functions[self._id] = (wrapper, self.metadatas)
         return wrapper

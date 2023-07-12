@@ -21,7 +21,6 @@ if TYPE_CHECKING:
     
 
 def _init(store: StoreInfo, filters: Filter = None, callbacks: List[Callback] = None):
-    store.init()
     store.set_filters(filters)
     store.set_callbacks(callbacks)
     
@@ -38,9 +37,11 @@ def _parse(store: StoreInfo, use_mapper=True):
         print("ETL is not initialized, initializing...")
         _init(store)
     
+    print(list(store._all_parsing_functions.values()))
+    
     tqdm_parsing_func = tqdm([
-        (f, l) for _, (f, l) in store._all_parsing_functions.items()
-        if not (store._filters and store._filters.skip_parse(l))
+        (wrapper, metadatas) for (wrapper, metadatas) in store._all_parsing_functions.values()
+        if not (store._filters and store._filters.skip_parse(metadatas))
     ])
     
     for func, _ in tqdm_parsing_func:

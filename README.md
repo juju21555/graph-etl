@@ -194,13 +194,13 @@ filters = (
         .add_nodes(["City", "Person"])
         .add_edge("LIVE_IN")
 )
-getl.parse(filters)
+getl.init(filters=filters)
 ```
 
 Construct a `SHACL` schema or an `OWL2` schema of the graph by passing `Callback` object.
 
 ```python
-getl.parse(callbacks=[getl.CallbackOWL(), getl.CallbackSHACL()])
+getl.init(callbacks=[getl.CallbackOWL(), getl.CallbackSHACL()])
 ```
 
 `getl.CallbackOWL()` need the module `owlready2` and `getl.CallbackSHACL()` need the module `rdflib`
