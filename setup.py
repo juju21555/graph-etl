@@ -19,7 +19,8 @@ Note: This package requires a Neo4j or TigerGraph database running.
 """,
     packages=["graph_etl"],
     install_requires=[
-        "polars",
+        "tqdm",
+        "polars>=0.18.7",
         "PyYAML",
         "pyTigerGraph",
         "neo4j",

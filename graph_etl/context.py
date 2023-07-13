@@ -117,7 +117,7 @@ class Context:
             primary_key = 'id'
             
         nodes = (
-            nodes.with_columns(pl.col(pl.List(pl.Utf8)).arr.join('|'))
+            nodes.with_columns(pl.col(pl.List(pl.Utf8)).list.join('|'))
                 .with_columns(pl.col(pl.Utf8).str.replace_all('(\r|\n|\\\\)', ''))
                 .unique(subset=[primary_key])
                 .drop_nulls(primary_key)
@@ -219,7 +219,7 @@ class Context:
         cols_type = {k: str(v) for (k, v) in edges.schema.items()}
         
         edges = (
-            edges.with_columns(pl.col(pl.List(pl.Utf8)).arr.join('|'))
+            edges.with_columns(pl.col(pl.List(pl.Utf8)).list.join('|'))
                 .with_columns(pl.col(pl.Utf8).str.replace_all('(\r|\n|\\\\)', ''))
                 .unique(subset=['start', 'end'])
                 .drop_nulls(['start', 'end'])

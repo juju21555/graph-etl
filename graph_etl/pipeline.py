@@ -7,11 +7,8 @@ import time
 
 import json
 import polars as pl
+from tqdm import tqdm
 
-try:
-    from tqdm import tqdm
-except:
-    tqdm = lambda x: x
 
 if TYPE_CHECKING:
     from .loader import Loader
