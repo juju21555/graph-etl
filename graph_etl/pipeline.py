@@ -37,8 +37,6 @@ def _parse(store: StoreInfo, use_mapper=True):
         print("ETL is not initialized, initializing...")
         _init(store)
     
-    print(list(store._all_parsing_functions.values()))
-    
     tqdm_parsing_func = tqdm([
         (wrapper, metadatas) for (wrapper, metadatas) in store._all_parsing_functions.values()
         if not (store._filters and store._filters.skip_parse(metadatas))
@@ -137,16 +135,18 @@ def _load(store: StoreInfo, loader_obj: Loader, clear_source : Union[List[str], 
         _parse(store)
     
     start = time.time()
+    
+    nodes_items = tqdm(store._configs.nodes.items())
      
-    for node, infos in store._configs.nodes.items():
-        
-        if store._filters and store._filters.skip_load_node(infos.metadatas, node): continue
+    for node, infos in nodes_items:
+        nodes_items.set_description(f"Loading {node} nodes...")
         
         for file_path, metadatas in infos.files.items():
-            print(file_path)
+            
+            if store._filters and store._filters.skip_load_node(metadatas, node): continue
             
             if f"{file_path}\n" in store._already_loaded: continue
-        
+            
             logging.info(f"{file_path:<30} loading...")
             
             nodesCreated = loader_obj.load_nodes(
@@ -167,11 +167,14 @@ def _load(store: StoreInfo, loader_obj: Loader, clear_source : Union[List[str], 
                 f.write(f"{file_path}\n")
             
             
-    for edge, infos in store._configs.edges.items():
-        
-        if store._filters and store._filters.skip_load_edge(infos.metadatas, edge): continue
+    edges_items = tqdm(store._configs.edges.items())
+    
+    for edge, infos in edges_items:
+        edges_items.set_description(f"Loading {edge} edges...")
         
         for file_path, metadatas in infos.files.items():
+            
+            if store._filters and store._filters.skip_load_edge(metadatas, edge): continue
             
             if f"{file_path}\n" in store._already_loaded: continue
             

@@ -66,7 +66,7 @@ class CallbackOWL(Callback):
             
             for k, v in metadatas.items():
                 types.new_class(f"has_{k}", (self._owl2.AnnotationProperty, ))
-                nodeClass.__getattribute__(f"has_{k}").append(v)
+                getattr(nodeClass, f"has_{k}").append(v)
             
             prop_is_func = kwargs.get('functionnal_property', [])
             
@@ -167,9 +167,9 @@ class CallbackSHACL(Callback):
     ) :
         label_shape = label+"Shape"
         
-        self.g.add((self._rdflib.NEO4J[label_shape], self._rdflib.namespace.RDF.type, self._rdflib.namespace.SH.NodeShape))
-        self.g.add((self._rdflib.NEO4J[label_shape], self._rdflib.namespace.SH.targetClass, self._rdflib.NEO4J[label]))
-        self.g.add((self._rdflib.NEO4J[label_shape], self._rdflib.namespace.SH.closed, self._rdflib.Literal(True)))
+        self.g.add((self.NEO4J[label_shape], self._rdflib.namespace.RDF.type, self._rdflib.namespace.SH.NodeShape))
+        self.g.add((self.NEO4J[label_shape], self._rdflib.namespace.SH.targetClass, self.NEO4J[label]))
+        self.g.add((self.NEO4J[label_shape], self._rdflib.namespace.SH.closed, self._rdflib.Literal(True)))
         
         prop_is_func = kwargs.get('functionnal_property', [])
         
@@ -177,21 +177,21 @@ class CallbackSHACL(Callback):
             if (owl_property := self.type_mapping(property_range)):
                 if property_name in prop_is_func:
                     b_node_prop = self._rdflib.BNode()
-                    self.g.add((self._rdflib.NEO4J[label_shape], self._rdflib.namespace.SH.property, b_node_prop))
-                    self.g.add((b_node_prop, self._rdflib.namespace.SH.path, self._rdflib.NEO4J[property_name]))
+                    self.g.add((self.NEO4J[label_shape], self._rdflib.namespace.SH.property, b_node_prop))
+                    self.g.add((b_node_prop, self._rdflib.namespace.SH.path, self.NEO4J[property_name]))
                     self.g.add((b_node_prop, self._rdflib.namespace.SH.maxCount, self._rdflib.Literal(1)))
                     self.g.add((b_node_prop, self._rdflib.namespace.SH.datatype, owl_property))
                      
                 else:
                     b_node_prop = self._rdflib.BNode()
-                    self.g.add((self._rdflib.NEO4J[label_shape], self._rdflib.namespace.SH.property, b_node_prop))
-                    self.g.add((b_node_prop, self._rdflib.namespace.SH.path, self._rdflib.NEO4J[property_name]))
+                    self.g.add((self.NEO4J[label_shape], self._rdflib.namespace.SH.property, b_node_prop))
+                    self.g.add((b_node_prop, self._rdflib.namespace.SH.path, self.NEO4J[property_name]))
                     self.g.add((b_node_prop, self._rdflib.namespace.SH.datatype, owl_property))
         
         for k in metadatas.keys():
             b_node_prop = self._rdflib.BNode()
-            self.g.add((self._rdflib.NEO4J[label_shape], self._rdflib.namespace.SH.property, b_node_prop))
-            self.g.add((b_node_prop, self._rdflib.namespace.SH.path, self._rdflib.NEO4J[k]))
+            self.g.add((self.NEO4J[label_shape], self._rdflib.namespace.SH.property, b_node_prop))
+            self.g.add((b_node_prop, self._rdflib.namespace.SH.path, self.NEO4J[k]))
             self.g.add((b_node_prop, self._rdflib.namespace.SH.datatype, self._rdflib.namespace.XSD.string))
         
         self.g.serialize("./output/file.ttl", format="turtle")
@@ -208,9 +208,9 @@ class CallbackSHACL(Callback):
         start_label_shape = start_label + "Shape"
         
         b_node_prop = self._rdflib.BNode()
-        self.g.add((self._rdflib.NEO4J[start_label_shape], self._rdflib.namespace.SH.property, b_node_prop))
-        self.g.add((b_node_prop, self._rdflib.namespace.SH.path, self._rdflib.NEO4J[edge_type]))
-        self.g.add((b_node_prop, self._rdflib.namespace.SH["class"], self._rdflib.NEO4J[end_label]))
+        self.g.add((self.NEO4J[start_label_shape], self._rdflib.namespace.SH.property, b_node_prop))
+        self.g.add((b_node_prop, self._rdflib.namespace.SH.path, self.NEO4J[edge_type]))
+        self.g.add((b_node_prop, self._rdflib.namespace.SH["class"], self.NEO4J[end_label]))
         self.g.add((b_node_prop, self._rdflib.namespace.SH.nodeKind, self._rdflib.namespace.SH.IRI))
         
         self.g.serialize("./output/file.ttl", format="turtle")

@@ -38,8 +38,8 @@ def test_decorator():
     
     assert first_file_info["count"] == 2
     
-    assert first_file_info["metadata1"] == 15_000
-    assert first_file_info["metadata2"] == "metadata2"
+    assert first_file_info["metadatas"]["metadata1"] == 15_000
+    assert first_file_info["metadatas"]["metadata2"] == "metadata2"
 
     etl.clear()
 
@@ -75,8 +75,8 @@ def test_with_keyword():
     
     assert first_file_info["count"] == 2
     
-    assert first_file_info["metadata1"] == 2_834
-    assert first_file_info["metadata2"] == "metadata8"
+    assert first_file_info["metadatas"]["metadata1"] == 2_834
+    assert first_file_info["metadatas"]["metadata2"] == "metadata8"
     
     etl.clear()
         

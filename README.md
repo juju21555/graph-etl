@@ -96,6 +96,9 @@ def parse_person(context):
 ### main.py
 
 ```python
+from car import *
+from person import *
+
 import graph_etl as getl
 
 getl.init()

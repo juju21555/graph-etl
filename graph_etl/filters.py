@@ -49,10 +49,10 @@ class Filter:
         return self
 
     def skip_parse(self, metadatas: Dict):
-        return all(k not in self or v not in self[k] for (k, v) in metadatas.items())
+        return all(k not in self or v not in self[k] for (k, v) in metadatas.items()) and len(set(self.__dict__.keys()).intersection(metadatas.keys()))
 
     def skip_load_node(self, metadatas: Dict, node: str):
-        return (node not in self.nodes) and all(k not in self or v not in self[k] for (k, v) in metadatas.items())
+        return (node not in self.nodes) and self.skip_parse(metadatas)
     
     def skip_load_edge(self, metadatas: Dict, edge: str):
-        return (edge not in self.edges) and all(k not in self or v not in self[k] for (k, v) in metadatas.items())
+        return (edge not in self.edges) and self.skip_parse(metadatas)

@@ -133,12 +133,11 @@ class Neo4JLoader(Loader):
         >>> load_nodes(
             "./output/nodes/ChEMBL_Molecule.csv", 
             "Molecule",
-            "ChEMBL",
-            {"licence": "CC-BY-4.0"},
+            "id",
+            {"source": "ChEMBL", "licence": "CC-BY-4.0"},
             {"id": "Utf8", "name": "Utf8", ...},
             ["id"],
-            ["name"],
-            neo4j_connection
+            ["name"]
         )
         """
         
@@ -149,14 +148,15 @@ class Neo4JLoader(Loader):
         prop_mapped = ",".join(f"{k}: {{ {Neo4JLoader.csv_mapping(property)} }}" for k, property in properties_type.items())
         loader_options = f"{{sep: ';', arraySep: '|', escapeChar:'NONE', mapping : {{ {prop_mapped} }} }}"
         
-        metadatas = ",".join(f"{k}: '{v}'" for k, v in metadatas.items())
+        flat_metadatas = {**metadatas["metadatas"], 'count': metadatas["count"]}
+        metadatas_str = ",".join(f"{k}: '{v}'" for k, v in flat_metadatas.items())
         
         QUERY = f"""
         CALL apoc.periodic.iterate(
             "CALL apoc.load.csv('file:/{file_path}', {loader_options}) YIELD map as row WHERE row.{primary_key} IS NOT NULL RETURN row",
             "MERGE (n:{label} {{id: row.{primary_key}}}) 
             SET n += row
-            MERGE (m:Metadata {{{metadatas}}})
+            MERGE (m:Metadata {{{metadatas_str}}})
             CREATE (n)-[:HAS_METADATA]->(m)",
             {{batchSize: 50000, iterateList: true, parallel: false}}
         )"""
@@ -164,10 +164,12 @@ class Neo4JLoader(Loader):
         with self.graph as g:
             
             for constraint in constraints:
-                g.execute_query(
-                    f"""CREATE CONSTRAINT {constraint}_{label} IF NOT EXISTS 
-                        FOR (n:{label}) REQUIRE n.{constraint} IS UNIQUE"""
-                )
+                try:
+                    g.execute_query(
+                        f"""CREATE CONSTRAINT {constraint}_{label} IF NOT EXISTS 
+                            FOR (n:{label}) REQUIRE n.{constraint} IS UNIQUE"""
+                    )
+                except: continue
                 
             for index in indexs:
                 g.execute_query(
@@ -217,10 +219,8 @@ class Neo4JLoader(Loader):
             "is_a",
             "GO:id",
             "GO:id",
-            "GO",
-            {"licence": "CC-BY-4.0"},
-            {"start": "Utf8", "end": "Utf8"},
-            neo4j_connection
+            {"source": "GO", "licence": "CC-BY-4.0"},
+            {"start": "Utf8", "end": "Utf8"}
         )
         """
         

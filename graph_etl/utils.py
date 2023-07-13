@@ -90,7 +90,7 @@ class StoreInfo:
             self._configs.nodes[label] = default_infos
         
         self._configs.nodes[label].files[file_name] = {
-            **metadatas,
+            'metadatas': metadatas,
             'count': count
         }
         self._stats_store['nodes_count_source'] += count
@@ -100,7 +100,7 @@ class StoreInfo:
             self._configs.edges[edge_type] = default_infos
             
         self._configs.edges[edge_type].files[file_name] = {
-            **metadatas,
+            'metadatas': metadatas,
             'count': count
         }
         self._stats_store['edges_count_source'] += count
@@ -165,6 +165,8 @@ def clear():
     """
     import shutil
     global INFOS_SINGLETON
+    
+    logging.shutdown()
     
     if os.path.exists("./output"):
         shutil.rmtree("./output")

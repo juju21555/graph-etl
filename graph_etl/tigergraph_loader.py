@@ -158,7 +158,6 @@ class TigerGraphLoader(Loader):
         
         res = self.graph.gsql(QUERY)
         n_loaded = int(next(line for line in res.splitlines() if ".csv |" in line).split("|")[3])
-        print(n_loaded)
         
         self.graph.gsql(f"""USE GRAPH Default
         DROP LOADING JOB load_node_{file_name}""")
@@ -261,7 +260,6 @@ class TigerGraphLoader(Loader):
         
         res = self.graph.gsql(QUERY)
         n_loaded = int(next(line for line in res.splitlines() if ".csv |" in line).split("|")[3])
-        print(n_loaded)
         
         self.graph.gsql(f"""USE GRAPH Default
         DROP LOADING JOB load_edge_{file_name}""")
