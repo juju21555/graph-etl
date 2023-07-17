@@ -89,7 +89,7 @@ def parse_person(context):
     ]
 
     context.save_nodes(dataset_person, "Person", primary_key="name")
-    context.save_nodes(dataset_person_car, "HAS_CAR", start="Person:name", end="Car:id")
+    context.save_edges(dataset_person_car, "HAS_CAR", start="Person:name", end="Car:id")
 
 ```
 

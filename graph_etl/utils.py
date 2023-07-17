@@ -40,7 +40,7 @@ class StoreInfo:
                 self._already_loaded = f.readlines()
         else:
             self._already_loaded = []
-
+        
         self.clear()
         
     def clear(self):
@@ -62,6 +62,11 @@ class StoreInfo:
             'nodes': {},
             'edges': {}
         })
+    
+    def load_configs(self):
+        with open(f"./output/configs/configs.json", "r") as f:
+            self._configs = DotWiz(json.load(f))
+
     
     def add_mapping(self, id_to_map: str, mapping: Any):
         self._ids_to_map[id_to_map] = mapping
@@ -113,8 +118,10 @@ class StoreInfo:
 
 INFOS_SINGLETON = StoreInfo()
 
-def init(filters: Filter = None, callbacks: List[Callback] = None):
+def init(filters: Filter = None, callbacks: List[Callback] = None, load_configs=False):
     global INFOS_SINGLETON
+    if load_configs:
+        INFOS_SINGLETON.load_configs()
     _init(INFOS_SINGLETON, filters=filters, callbacks=callbacks)
 
 def parse(use_mapper=True):
@@ -276,6 +283,7 @@ The variable `context` must be used in the function to save nodes or edges using
 `context.save_edges(...)`
 `context.map_ids(...)`""")
         
+        self._id = f"FUNCTION_{f.__name__}"
         def wrapper():
             if self._should_skip(self._id): return
             

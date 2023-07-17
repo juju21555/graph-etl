@@ -39,8 +39,8 @@ def _parse(store: StoreInfo, use_mapper=True):
         if not (store._filters and store._filters.skip_parse(metadatas))
     ])
     
-    for func, _ in tqdm_parsing_func:
-        tqdm_parsing_func.set_description(f"Parsing ...")
+    for func, metadatas in tqdm_parsing_func:
+        tqdm_parsing_func.set_description(f"Parsing {metadatas}...")
         func()
         
     if use_mapper:
@@ -95,8 +95,8 @@ def _map_property(store: StoreInfo):
                         ]
                         
                         mapping = pl.concat(
-                            (pl.read_csv(f"./output/nodes/{file_}", separator=";", infer_schema_length=100_000) for file_ in mapping_nodes_files)
-                        ).select(["id", p_id])
+                            (pl.read_csv(f"./output/nodes/{file_}", separator=";", infer_schema_length=100_000).select(["id", p_id]) for file_ in mapping_nodes_files)
+                        )
                         
                         df = (
                             df.join(
