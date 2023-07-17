@@ -35,6 +35,7 @@ class Neo4JLoader(Loader):
     def __init__(
         self,
         node_finding_strategy: Union[Literal["match"], Literal["create"]] = "match",
+        metadata_strategy: Union[Literal["as_property"], Literal["as_edge"]] = "as_property",
         **kwargs
     ):
         """
@@ -82,6 +83,8 @@ class Neo4JLoader(Loader):
             auth=(config["username"], config["password"]), 
             database=config["database"]
         )
+        
+        self.metadata_strategy = metadata_strategy
         
         try:
             self.graph.verify_connectivity()
@@ -151,15 +154,26 @@ class Neo4JLoader(Loader):
         flat_metadatas = {**metadatas["metadatas"], 'count': metadatas["count"]}
         metadatas_str = ",".join(f"{k}: '{v}'" for k, v in flat_metadatas.items())
         
-        QUERY = f"""
-        CALL apoc.periodic.iterate(
-            "CALL apoc.load.csv('file:/{file_path}', {loader_options}) YIELD map as row WHERE row.{primary_key} IS NOT NULL RETURN row",
-            "MERGE (n:{label} {{id: row.{primary_key}}}) 
-            SET n += row
-            MERGE (m:Metadata {{{metadatas_str}}})
-            CREATE (n)-[:HAS_METADATA]->(m)",
-            {{batchSize: 50000, iterateList: true, parallel: false}}
-        )"""
+        if self.metadata_strategy == "as_property":
+            QUERY = f"""
+            CALL apoc.periodic.iterate(
+                "CALL apoc.load.csv('file:/{file_path}', {loader_options}) YIELD map as row WHERE row.{primary_key} IS NOT NULL RETURN row",
+                "MERGE (n:{label} {{id: row.{primary_key}}}) 
+                SET n += row
+                SET n += {{{metadatas_str}}}",
+                {{batchSize: 50000, iterateList: true, parallel: false}}
+            )"""
+        else:
+            QUERY = f"""
+            CALL apoc.periodic.iterate(
+                "CALL apoc.load.csv('file:/{file_path}', {loader_options}) YIELD map as row WHERE row.{primary_key} IS NOT NULL RETURN row",
+                "MERGE (n:{label} {{id: row.{primary_key}}}) 
+                SET n += row
+                MERGE (m:Metadata {{{metadatas_str}}})
+                CREATE (n)-[:HAS_METADATA]->(m)",
+                {{batchSize: 50000, iterateList: true, parallel: false}}
+            )"""
+            
         
         with self.graph as g:
             
@@ -239,7 +253,7 @@ class Neo4JLoader(Loader):
         start_label, start_id = start.split(':')
         end_label, end_id = end.split(':')
 
-        edges_properties = " ".join(f", {property}: row.{property}" for property in header)
+        edges_properties = ", ".join(f"{property}: row.{property}" for property in header)
         # edges_properties = f"{{ metadatas: '{metadatas}' {bonus_properties} }}"
 
         prop_mapped = ",".join(f"{k}: {{ {Neo4JLoader.csv_mapping(property)} }}" for k, property in properties_type.items())
@@ -268,7 +282,7 @@ class Neo4JLoader(Loader):
             WHERE row.start <> '' AND row.end <> ''
             RETURN row",
             "{NODE_FINDING_STRATEGY}
-            CREATE (n)-[:{edge_type} {edges_properties}]->(m)",
+            CREATE (n)-[:{edge_type} {{{edges_properties}}}]->(m)",
             {{batchSize: 20000}}
         )
         """

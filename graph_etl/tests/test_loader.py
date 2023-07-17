@@ -8,7 +8,7 @@ def test_load_neo4j():
     etl.init()
     
     try:
-        neo_connection = etl.Neo4JLoader()
+        neo_connection = etl.Neo4JLoader(metadata_strategy="as_edge")
     except ConnectionError: 
         return
     
