@@ -228,12 +228,13 @@ class Context:
         )
 
         default_infos = {
-            'start': start_id,
-            'end': end_id,
             'properties_type': cols_type,
             'ignore_mapping': ignore_mapping,
             'files': {}
         }
+        
+        self.metadatas['start'] = start_id
+        self.metadatas['end'] = end_id
 
         uuid = "FILE_"+str(uuid4())
         

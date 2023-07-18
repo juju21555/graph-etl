@@ -7,7 +7,7 @@ import time
 
 import json
 import polars as pl
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 
 if TYPE_CHECKING:
@@ -48,13 +48,13 @@ def _parse(store: StoreInfo, use_mapper=True):
     
 def _map_property(store: StoreInfo):
     for edge_properties in store._configs.edges.values():
-        for file in edge_properties.files:
+        for file, file_properties in edge_properties.files.items():
             
-            if not edge_properties.ignore_mapping and set((edge_properties.start, edge_properties.end)).intersection(set(store._ids_to_map)):
+            if not edge_properties.ignore_mapping and set((file_properties.metadatas.start, file_properties.metadatas.end)).intersection(set(store._ids_to_map)):
                 df = pl.read_csv(f"./output/edges/{file}", separator=";", infer_schema_length=100_000)
                 for prop in ("start", "end"):
-                    if edge_properties[prop] in store._ids_to_map.keys():
-                        mapping = store._ids_to_map[edge_properties[prop]]
+                    if file_properties.metadatas[prop] in store._ids_to_map.keys():
+                        mapping = store._ids_to_map[file_properties.metadatas[prop]]
                         df = df.join(
                             mapping,
                             left_on=prop,
@@ -67,15 +67,14 @@ def _map_property(store: StoreInfo):
                             "new_value": prop
                         })
                         
-                    edge_properties.ignore_mapping = True
                     edge_properties.properties_type[prop] = str(df.get_column(prop).dtype)
                 
                 df = df.unique(subset=['start', 'end'])
                 df.write_csv(f"./output/edges/{file}", separator=";")
         
 
-            start_label, start_id = edge_properties["start"].split(":")
-            end_label, end_id = edge_properties["end"].split(":")
+            start_label, start_id = file_properties.metadatas["start"].split(":")
+            end_label, end_id = file_properties.metadatas["end"].split(":")
             
             if not (
                 start_label in store._configs.nodes and
@@ -86,7 +85,7 @@ def _map_property(store: StoreInfo):
                 df = pl.read_csv(f"./output/edges/{file}", separator=";", infer_schema_length=100_000)
                     
                 for prop in ('start', 'end'):
-                    p = edge_properties[prop]
+                    p = file_properties.metadatas[prop]
                     p_label, p_id = p.split(":")
                     if "id" != p_id:
                         
@@ -110,9 +109,8 @@ def _map_property(store: StoreInfo):
                             .rename({"id": prop})
                         )
                         
-                        edge_properties.ignore_mapping = True
                         edge_properties.properties_type[prop] = str(df.get_column(prop).dtype)
-                        edge_properties[prop] = f"{p_label}:id"
+                        file_properties.metadatas[prop] = f"{p_label}:id"
                         
                 df = df.unique(subset=['start', 'end'])
                 df.write_csv(f"./output/edges/{file}", separator=";")

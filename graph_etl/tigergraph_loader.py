@@ -35,7 +35,7 @@ class TigerGraphLoader(Loader):
         **kwargs
     ):
         """
-        Loader object for Neo4J
+        Loader object for TigerGraph
 
         Parameters
         ----------
@@ -45,7 +45,7 @@ class TigerGraphLoader(Loader):
         Examples
         --------
 
-        >>> loader = Neo4JLoader(host="http://127.0.0.1", username="tigergraph", password="tigergraph")
+        >>> loader = TigerGraphLoader(host="http://127.0.0.1", username="tigergraph", password="tigergraph")
         """
         if "url" in kwargs:
             kwargs["host"] = kwargs["url"]

@@ -155,8 +155,11 @@ def test_decorator_auto_mapping():
         
     with open("./output/configs/configs.json", "r") as f:
         configs = json.load(f)
-        
-    f_name = f"./output/edges/{list(configs['edges']['DRIVED_BY']['files'].keys())[0]}"
+    
+    file, file_prop = list(configs['edges']['DRIVED_BY']['files'].items())[0]
+    
+    f_name = f"./output/edges/{file}"
+    
     with open(f_name, 'r') as f: 
         line_tom = next(line for line in f.read().splitlines() if "101" in line).split(';')
         
@@ -164,9 +167,9 @@ def test_decorator_auto_mapping():
     
     assert "Int" in configs["edges"]["DRIVED_BY"]["properties_type"]["start"]
     
-    assert configs["edges"]["DRIVED_BY"]["end"] == "Person:id"
+    assert file_prop["metadatas"]["end"] == "Person:id"
     
-    assert list(configs["edges"]["DRIVED_BY"]["files"].values())[0]["count"] == 3
+    assert file_prop["count"] == 3
 
     etl.clear()
         
