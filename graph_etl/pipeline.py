@@ -178,8 +178,8 @@ def _load(store: StoreInfo, loader_obj: Loader, clear_source : Union[List[str], 
             relationshipsCreated = loader_obj.load_edges(
                 file_path=file_path,
                 edge_type=edge,
-                start=infos.start,
-                end=infos.end,
+                start=metadatas.metadatas.start,
+                end=metadatas.metadatas.end,
                 metadatas=metadatas.to_dict(),
                 properties_type=infos.properties_type
             )
