@@ -12,6 +12,8 @@ class Context:
     def __init__(self, store: StoreInfo, metadatas: Dict):
         self.store: StoreInfo = store
         self.metadatas: Dict = metadatas
+        self.last_node_chunk : int = 0
+        self.last_edge_chunk : int = 0
         
     def map_ids(
         self, 
@@ -144,12 +146,13 @@ class Context:
         uuid = "FILE_"+str(uuid4())
 
         for i_chunk in nodes.get_column("row_nr").unique().to_list():
-            file_name = f"{uuid}_{label}_{i_chunk}.csv"
+            file_name = f"{uuid}_{label}_{self.last_node_chunk}.csv"
             
             chunk = nodes.filter(pl.col("row_nr")==i_chunk).drop("row_nr")
             chunk.write_csv(f"./output/nodes/{file_name}", separator=';')
             
             self.store.update_nodes(label, file_name, default_infos, self.metadatas, chunk.shape[0])
+            self.last_node_chunk += 1
         
     def save_edges(
         self, 
@@ -222,26 +225,26 @@ class Context:
             edges.with_columns(pl.col(pl.List(pl.Utf8)).list.join('|'))
                 .with_columns(pl.col(pl.Utf8).str.replace_all('(\r|\n|\\\\)', ''))
                 .unique(subset=['start', 'end'])
-                .drop_nulls(['start', 'end'])
+                .drop_nulls('start')
+                .drop_nulls('end')
                 .with_row_count()
                 .with_columns(pl.col("row_nr")//500_000)
         )
 
         default_infos = {
+            'start': start_id,
+            'end': end_id,
             'properties_type': cols_type,
             'ignore_mapping': ignore_mapping,
-            'files': {}
         }
-        
-        self.metadatas['start'] = start_id
-        self.metadatas['end'] = end_id
 
         uuid = "FILE_"+str(uuid4())
         
         for i_chunk in edges.get_column("row_nr").unique().to_list():
-            file_name = f"{uuid}_{start_label}{edge_type}{end_label}_{i_chunk}.csv"
+            file_name = f"{uuid}_{start_label}{edge_type}{end_label}_{self.last_edge_chunk}.csv"
             
             chunk = edges.filter(pl.col("row_nr")==i_chunk).drop("row_nr")
             chunk.write_csv(f"./output/edges/{file_name}", separator=';')
             
             self.store.update_edges(edge_type, file_name, default_infos, self.metadatas, chunk.shape[0])
+            self.last_edge_chunk += 1

@@ -64,8 +64,14 @@ class StoreInfo:
         })
     
     def load_configs(self):
-        with open(f"./output/configs/configs.json", "r") as f:
-            self._configs = DotWiz(json.load(f))
+        try:
+            with open(f"./output/configs/configs.json", "r") as f:
+                self._configs = DotWiz(json.load(f))
+        except:
+            self._configs = DotWiz({
+                'nodes': {},
+                'edges': {}
+            })
 
     
     def add_mapping(self, id_to_map: str, mapping: Any):
@@ -100,11 +106,13 @@ class StoreInfo:
         }
         self._stats_store['nodes_count_source'] += count
         
+        
     def update_edges(self, edge_type: str, file_name : str, default_infos: Dict, metadatas: Dict, count: int):
         if edge_type not in self._configs.edges:
-            self._configs.edges[edge_type] = default_infos
+            self._configs.edges[edge_type] = {}
             
-        self._configs.edges[edge_type].files[file_name] = {
+        self._configs.edges[edge_type][file_name] = {
+            **default_infos,
             'metadatas': metadatas,
             'count': count
         }
